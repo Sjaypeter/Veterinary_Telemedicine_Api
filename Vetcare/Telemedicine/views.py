@@ -11,19 +11,19 @@ class OwnerProfileView(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
 
-class VetprofileViewset(viewsets.ModelViewSet):
+class VetprofileView(viewsets.ModelViewSet):
     queryset = Vetprofile.objects.all()
     serializer_class = VetprofileSerializer
     permission_classes = [IsAuthenticated]
     
 
-class PetProfileViewset(viewsets.ModelViewSet):
+class PetProfileView(viewsets.ModelViewSet):
     queryset = PetProfile.objects.all()
     serializer_class = VetprofileSerializer
     permission_classes = [IsAuthenticated]
 
     
-class AppointmentViewset(viewsets.ModelViewSet):
+class AppointmentView(viewsets.ModelViewSet):
     queryset = Appointment.objects.all()
     serializer_class = AppointmentSerializer
     permission_classes = [IsAuthenticated]
