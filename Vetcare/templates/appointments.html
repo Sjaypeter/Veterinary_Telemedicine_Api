@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Appointments{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>Appointments</h2>
+  {% if request.user.is_authenticated %}
+    <a href="{% url 'appointments-create' %}" class="btn btn-primary">New Appointment</a>
+  {% endif %}
+</div>
+
+{% if appointments %}
+  <div class="list-group">
+    {% for appt in appointments %}
+      <div class="list-group-item">
+        <div class="d-flex justify-content-between">
+          <div>
+            <strong>{{ appt.pet.name }}</strong> — {{ appt.date|date:"Y-m-d H:i" }}
+            <div class="small text-muted">Vet: Dr. {{ appt.vet.user.get_full_name|default:appt.vet.user.username }} — Status: {{ appt.status }}</div>
+            <p class="mb-0">{{ appt.reason|truncatechars:140 }}</p>
+          </div>
+          <div>
+            <a href="{% url 'appointment-detail' appt.id %}" class="btn btn-sm btn-outline-secondary">Details</a>
+            {% if request.user == appt.owner.user %}
+              <a href="{% url 'appointments-edit' appt.id %}" class="btn btn-sm btn-outline-warning">Edit</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="text-muted">No appointments found.</p>
+{% endif %}
+
+{% if show_create_form %}
+  <hr>
+  <h4>Create appointment</h4>
+  <form method="post">
+    {% csrf_token %}
+    {{ appointment_form.as_p }}
+    <button class="btn btn-success">Request appointment</button>
+  </form>
+{% endif %}
+{% endblock %}

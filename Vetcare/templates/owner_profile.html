@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Vet profile — {{ vet.user.username }}{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <h2>Dr. {{ vet.user.get_full_name|default:vet.user.username }}</h2>
+    <p><strong>Specialization:</strong> {{ vet.specialization }}</p>
+    <p><strong>License:</strong> {{ vet.license_number }}</p>
+    <hr>
+
+    <h4>Appointments</h4>
+    {% if appointments %}
+      <ul class="list-group">
+        {% for a in appointments %}
+          <li class="list-group-item d-flex justify-content-between">
+            <div>

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Medical Records{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>Medical Records</h2>
+  {% if request.user.is_authenticated and request.user|has_group:"Vets" %}
+    <button class="btn btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#newRecord">Add record</button>
+  {% endif %}
+</div>
+
+<div id="recordsList">
+  {% if records %}
+    <div class="list-group">
+      {% for rec in records %}
+        <div class="list-group-item">
+          <div class="d-flex justify-content-between">
+            <div>
+              <strong>{{ rec.pet.name }}</strong> — <em>{{ rec.date|date:"Y-m-d" }}</em>
+              <p class="mb-0">{{ rec.diagnosis|truncatechars:150 }}</p>
+              <div class="small text-muted">By: Dr. {{ rec.vet.user.username }}</div>
+            </div>
+            <div class="text-end">
+              <a href="{% url 'medical-record-detail' rec.id %}" class="btn btn-sm btn-outline-secondary">View</a>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="text-muted">No medical records found.</p>
+  {% endif %}
+</div>
+
+<div class="collapse mt-3" id="newRecord">
+  <div class="card card-body">
+    <h5>Add Medical Record</h5>
+    <form method="post">
+      {% csrf_token %}
+      {{ medical_record_form.as_p }}
+      <button class="btn btn-primary">Save record</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
