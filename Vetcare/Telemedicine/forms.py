@@ -20,6 +20,13 @@ class CustomUserCreationForm(UserCreationForm):
         email = self.cleaned_data.get("email")
         if User.objects.filter(email=email).exists():
             raise ValidationError("This email is already in use. Please use a different email.")    
+        
+    def save(self, commit = True):
+        user = super(UserCreationForm, self).save(commit=False)
+        user.email = self.cleaned_data["email"]
+        user.first_name = self.cleaned_data["first_name"]
+        user.last_name = self.cleaned_data["last_name"]
+        
 
 class OwnerProfileForm(forms.ModelForm):
     
