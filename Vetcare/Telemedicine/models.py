@@ -1,10 +1,14 @@
 from django.db import models
 from datetime import datetime
 import uuid
+from django.conf import settings
 from django.contrib.auth.models import User
 # Create your models here.
 
 #Models are  Vetprofile, Ownerprofile,Pets, Appointments, Medical_records
+
+#This ensures that Django always points to my active user model — whether it’s the default one or a custom one
+User = settings.AUTH_USER_MODEL 
 
 class OwnerProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
