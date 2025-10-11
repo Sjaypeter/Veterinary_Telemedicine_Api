@@ -40,6 +40,12 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'Telemedicine',
     'rest_framework',
+    'accounts',
+    'appointments',
+    'medical_records',
+    'notifications',
+    'pets',
+    'posts',
 ]
 
 MIDDLEWARE = [
