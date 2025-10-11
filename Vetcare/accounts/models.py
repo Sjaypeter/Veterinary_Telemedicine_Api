@@ -15,7 +15,7 @@ class CustomUser(AbstractUser):
         return self.username
 
 class OwnerProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     phone = models.CharField(max_length=15)
     address = models.TextField()
     
@@ -24,7 +24,7 @@ class OwnerProfile(models.Model):
 
 
 class Vetprofile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     specialization = models.CharField(max_length=100)
     license_number = models.CharField(max_length=50)
     
