@@ -17,7 +17,7 @@ class OwnerProfile(models.Model):
     
     def __str__(self):
         return f"Owner: {self.user.username}"
-
+    #Might change this to abstractuser 
 
 
 class Vetprofile(models.Model):
@@ -27,6 +27,7 @@ class Vetprofile(models.Model):
     
     def __str__(self):
         return f"Vet: {self.user.username} - {self.specialization}"
+    #Might change this to abstractuser 
 
 
     
