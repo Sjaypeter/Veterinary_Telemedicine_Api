@@ -17,6 +17,15 @@ class PetProfile(models.Model):
     species = models.CharField(max_length=100, blank=True)
     breed = models.CharField(max_length=100, blank=True)
     age = models.IntegerField()
+    gender = models.CharField(max_length=10, choices=[
+        ('male', 'Male'),
+        ('female', 'Female'),
+    ])
+    weight = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    profile_image = models.ImageField(upload_to='pets/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
         return f"{self.name} - {self.owner.username}"
+    
+    

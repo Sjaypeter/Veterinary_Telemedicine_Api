@@ -1,6 +1,8 @@
 from django.db import models
 from django.conf import settings
 
+
+#Add this app to settings when you work on it
 User = settings.AUTH_USER_MODEL
 
 class Transaction(models.Model):
