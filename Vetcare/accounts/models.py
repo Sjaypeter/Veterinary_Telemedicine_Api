@@ -4,13 +4,6 @@ from django.conf import settings
 from django.contrib.auth.models import User
 # Create your models here.
 
-#Models are  Vetprofile, Ownerprofile,Pets, Appointments, Medical_records
-
-#This ensures that Django always points to my active user model — whether it’s the default one or a custom one
-User = settings.AUTH_USER_MODEL 
-
-
-
 class CustomUser(AbstractUser):
     is_vet = models.BooleanField(default=False)
     is_owner = models.BooleanField(default=False)
