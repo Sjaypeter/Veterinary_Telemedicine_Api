@@ -3,12 +3,10 @@ from . serializers import CustomUserSerializer, OwnerProfileSerializer, VetProfi
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authtoken.views import ObtainAuthToken
-from django.contrib.auth import get_user_model
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.authtoken.models import Token
-from .models import CustomUser
+from django.contrib.auth import get_user_model, authenticate
+from . models import CustomUser, Vetprofile,OwnerProfile
 from django.shortcuts import get_object_or_404
 
 
@@ -19,48 +17,49 @@ User = get_user_model()
 
 
 class RegisterView(generics.CreateAPIView):
+    """Allows a new user to register (vet or owner)."""
+
     queryset = CustomUser.objects.all()
     serializer_class = RegisterSerializer
 
-    def create(self, request, *args, **kwargs):
-        response = super().create(request, *args, **kwargs)
-        user = User.objects.get(username=response.data['username'])
-        token, _ = Token.objects.get_or_create(user=user)
-        return Response({
-            'user': CustomUserSerializer(user).data,
-            "token": token.key
-        }, status=status.HTTP_201_CREATED)
+
+    def perform_create(self, serializer):
+        user = serializer.save()
+        # Automatically create a profile based on user type
+        if user.is_owner:
+            OwnerProfile.objects.create(user=user)
+        elif user.is_vet:
+            Vetprofile.objects.create(user=user)
+        return user
     
 
 
-class LoginView(ObtainAuthToken):
+class LoginView(APIView):
+    """Handles user authentication and login."""
+    permission_classes = [AllowAny]
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data['user']
-        token, _ = Token.objects.get_or_create(user=user)
+        user = serializer.validated_data
         return Response({
-            'user': CustomUserSerializer(user).data,
-            'token': token.key
+            "message": "Login successful",
+            "user": CustomUserSerializer(user).data
         }, status=status.HTTP_200_OK)
 
-    
-    def get_object(self):
-        return self.request.user
-    
 
-class OwnerprofileView(generics.RetrieveAPIView):
+class UserProfileView(generics.RetrieveUpdateAPIView):
+    """Allows users to view or update their own profile."""
     serializer_class = CustomUserSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def get_object(self):
         return self.request.user
-    
 
-class VetprofileView(generics.RetrieveAPIView):
+class UserListView(generics.ListAPIView):
+    """List all users — can be filtered or searched later."""
+    queryset = User.objects.all()
     serializer_class = CustomUserSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
-    def get_object(self):
-        return self.request.user
+    
