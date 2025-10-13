@@ -32,19 +32,17 @@ class AppointmentListCreateView(generics.ListCreateAPIView):
         return Appointment.objects.filter(owner=user).order_by('-appointment_date')
 
     def perform_create(self, serializer):
-        """
-        Automatically assign the logged-in owner as the creator.
-        Vet can be selected from the request.
-        """
+        
+       # Automatically assign the logged-in owner as the creator. Vet can be selected from the request.
         serializer.save(owner=self.request.user)
 
 
 
 class AppointmentDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    Retrieve, update, or cancel an appointment.
-    Only the owner or assigned vet can modify.
-    """
+
+    #Retrieve, update, or cancel an appointment. Only the owner or assigned vet can modify.
+
+
     serializer_class = AppointmentSerializer
     permission_classes = [permissions.IsAuthenticated]
     queryset = Appointment.objects.all()
@@ -59,7 +57,9 @@ class AppointmentDetailView(generics.RetrieveUpdateDestroyAPIView):
         return appointment
 
     def delete(self, request, *args, **kwargs):
-        """mark the appointment as cancelled."""
+
+        #mark the appointment as cancelled
+
         appointment = self.get_object()
         appointment.status = 'Cancelled'
         appointment.save()
@@ -67,9 +67,9 @@ class AppointmentDetailView(generics.RetrieveUpdateDestroyAPIView):
     
 
 class VetUpcomingAppointmentsView(generics.ListAPIView):
-    """
-    List all upcoming appointments for the logged-in vet.
-    """
+    
+    #List all upcoming appointments for the logged-in vet.
+
     serializer_class = AppointmentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -80,9 +80,9 @@ class VetUpcomingAppointmentsView(generics.ListAPIView):
         return Appointment.objects.filter(vet=user, appointment_date__gte=timezone.now(), status='Scheduled').order_by('appointment_date')
 
 class OwnerPastAppointmentsView(generics.ListAPIView):
-    """
-    List all past (completed or cancelled) appointments for a pet owner.
-    """
+    
+    #List all past (completed or cancelled) appointments for a pet owner.
+    
     serializer_class = AppointmentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
