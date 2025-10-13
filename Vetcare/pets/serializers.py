@@ -8,7 +8,6 @@ User = get_user_model()
 class PetSerializer(serializers.ModelSerializer):
     owner = serializers.ReadOnlyField(source='owner.username')
 
-
     class Meta:
         model = PetProfile
         fields = [
