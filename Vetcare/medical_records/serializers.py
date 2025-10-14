@@ -1,8 +1,9 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import MedicalRecord
-#from ..pets.serializers import PetSerializer #tells Python to go up one directory (from medical_records to the project root) and then into pets
+from .models import MedicalRecord, Vaccination
 from pets. serializers import PetSerializer
+
+
 User = get_user_model()
 
 class VetSerializer(serializers.ModelSerializer):
@@ -23,7 +24,7 @@ class MedicalRecordSerializer(serializers.ModelSerializer):
     class Meta:
         model = MedicalRecord
         fields = [
-            'id', 'pet', 'vet',
+            'pet_id', 'pet', 'vet',
             'diagnosis', 'treatment', 'prescription',
             'visit_date', 'follow_up_date', 'notes'
         ]
@@ -39,7 +40,7 @@ class MedicalRecordSerializer(serializers.ModelSerializer):
 class VaccinationSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = MedicalRecord
+        model = Vaccination
         fields = [
             'id','pet', 'vet',
             'vaccine_name', 'date_administered', 'next_due_date', 'notes'

@@ -15,9 +15,9 @@ class AppointmentSerializer(serializers.ModelSerializer):
         model = Appointment
         fields = [
             'id', 'owner', 'vet', 'vet_name', 'pet', 'pet_id',
-            'date', 'reason', 'status', 'created_at'
+            'appointment_date', 'reason', 'status',
         ]
-        read_only_fields = ['id', 'owner', 'created_at', 'status']
+        read_only_fields = ['id', 'owner', 'status']
 
     def create(self, validated_data):
         validated_data['owner'] = self.context['request'].user
@@ -41,8 +41,8 @@ class ConsultationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Consultation
         fields = [
-            'id', 'appointment', 'appointment_id',
-            'notes', 'diagnosis', 'prescription', 'follow_up_date', 'created_at'
+            'id','owner', 'appointment', 'appointment_id',
+            'notes', 'prescription', 'created_at'
         ]
         read_only_fields = ['id', 'created_at']
 

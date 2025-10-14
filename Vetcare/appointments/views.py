@@ -103,8 +103,8 @@ class ConsultationListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         user = self.request.user
         if getattr(user, "is_vet", False):
-            return Consultation.objects.filter(vet=user).order_by('-consultation_date')
-        return Consultation.objects.filter(owner=user).order_by('-consultation_date')
+            return Consultation.objects.filter(vet=user)
+        return Consultation.objects.filter(owner=user)
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -155,7 +155,7 @@ class OwnerConsultationHistoryView(generics.ListAPIView):
         user = self.request.user
         if not getattr(user, "is_owner", False):
             self.permission_denied(self.request, message="Only pet owners can access this view.")
-        return Consultation.objects.filter(owner=user).order_by('-consultation_date')
+        return Consultation.objects.filter(owner=user)
 
 
 class VetFollowUpListView(generics.ListAPIView):
@@ -173,7 +173,7 @@ class VetFollowUpListView(generics.ListAPIView):
             vet=user,
             is_follow_up_required=True,
             follow_up_date__gte=timezone.now()
-        ).order_by('follow_up_date')
+        ) #set up follow up order filter
     
 
     

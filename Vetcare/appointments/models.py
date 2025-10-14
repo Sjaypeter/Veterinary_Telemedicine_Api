@@ -15,7 +15,7 @@ class Appointment(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="appointments")
     vet = models.ForeignKey(User, on_delete=models.CASCADE, related_name="vet_appointments")
     pet = models.ForeignKey(PetProfile, on_delete=models.CASCADE, related_name="appointments")
-    scheduled_date = models.DateTimeField()
+    appointment_date = models.DateTimeField()
     reason = models.TextField()
     status = models.CharField(max_length=20, choices=[
         ("pending","Pending"),
@@ -30,6 +30,7 @@ class Appointment(models.Model):
     
 
 class Consultation(models.Model):
+    owner = models.ForeignKey(User, on_delete=models.CASCADE,null=True, blank=True)
     appointment = models.OneToOneField(Appointment, on_delete=models.CASCADE, related_name='consultation')
     notes = models.TextField()
     prescription = models.TextField(blank=True, null=True)

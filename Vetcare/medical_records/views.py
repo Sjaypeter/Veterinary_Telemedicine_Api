@@ -20,8 +20,8 @@ class MedicalRecordListCreateView(generics.ListCreateAPIView):
         user = self.request.user
         # Owners see their own pets' records; vets see records they created
         if getattr(user, "is_vet", False):
-            return MedicalRecord.objects.filter(vet=user).order_by("-record_date")
-        return MedicalRecord.objects.filter(pet__owner=user).order_by("-record_date")
+            return MedicalRecord.objects.filter(vet=user).order_by("-visit_date")
+        return MedicalRecord.objects.filter(pet__owner=user).order_by("-visit_date")
 
     def perform_create(self, serializer):
         user = self.request.user

@@ -1,7 +1,7 @@
 from django.db import models
 from pets. models import PetProfile
 from django.conf import settings
-
+from django.utils import timezone
 
 User = settings.AUTH_USER_MODEL
 
@@ -12,7 +12,7 @@ class MedicalRecord(models.Model):
     treatment = models.TextField()
     date = models.DateField(auto_now_add=True)
     prescription = models.TextField(blank=True)
-    visit_date = models.DateTimeField(auto_now_add=True)
+    visit_date = models.DateTimeField(default=timezone.now, editable=False)
     follow_up_date = models.DateField(null=True, blank=True)
     notes = models.TextField(blank=True)
 
@@ -21,6 +21,7 @@ class MedicalRecord(models.Model):
 
 
 class Vaccination(models.Model):
+    vet = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     pet = models.ForeignKey(PetProfile, on_delete=models.CASCADE, related_name='vaccinations')
     vaccine_name = models.CharField(max_length=100)
     date_administered = models.DateField()
