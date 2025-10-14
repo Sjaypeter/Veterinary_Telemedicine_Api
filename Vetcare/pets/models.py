@@ -1,7 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import User
-
+from django.utils import timezone
 
 
 
@@ -23,7 +23,7 @@ class PetProfile(models.Model):
     ])
     weight = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     profile_image = models.ImageField(upload_to='pets/', blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
     
     def __str__(self):
         return f"{self.name} - {self.owner.username}"

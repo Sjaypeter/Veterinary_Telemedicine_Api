@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import MedicalRecord
 #from ..pets.serializers import PetSerializer #tells Python to go up one directory (from medical_records to the project root) and then into pets
-
+from pets. serializers import PetSerializer
 User = get_user_model()
 
 class VetSerializer(serializers.ModelSerializer):
@@ -12,7 +12,7 @@ class VetSerializer(serializers.ModelSerializer):
 
 
 class MedicalRecordSerializer(serializers.ModelSerializer):
-   # pet = PetSerializer(read_only=True)
+    pet = PetSerializer(read_only=True)
     pet_id = serializers.PrimaryKeyRelatedField(
         queryset=MedicalRecord._meta.get_field('pet').remote_field.model.objects.all(),
         source='pet',
