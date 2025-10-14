@@ -40,5 +40,5 @@ class PetDetailView(generics.RetrieveUpdateDestroyAPIView):
     def delete(self, request, *args, **kwargs):
         pet = self.get_object()
         if pet.owner != request.user:
-            return Response({'detail': 'You do not have permission to delete this pet.'}, status=status.HTTP_403_FORBIDDEN)
+            return Response({'detail': 'You do not have permission to delete this petprofile.'}, status=status.HTTP_403_FORBIDDEN)
         return super().delete(request, *args, **kwargs)

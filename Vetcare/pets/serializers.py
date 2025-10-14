@@ -22,4 +22,4 @@ class PetSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
     
 
-    #Automatically assigns the logged-in user as the owner when a pet is created.
+    #Automatically assigns the logged-in user as the owner when a petprofile is created.
