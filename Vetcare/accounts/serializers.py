@@ -1,41 +1,63 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
-from .models import OwnerProfile, Vetprofile
+from .models import ClientProfile, Vetprofile
 from .models import CustomUser
 
 User = get_user_model()
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'username', 'email', 'bio', 'profile_picture', 'is_vet', 'is_client']
+
+
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+    role = serializers.ChoiceField(choices=[('vet', 'Vet'), ('client', 'Client')])
 
     class Meta:
-        model = User
-        fields = [
-            'id', 'username', 'email', 'first_name', 'last_name',
-            'role', 'password'
-        ]
+        model = CustomUser
+        fields = ['username', 'email', 'password', 'role']
 
     def create(self, validated_data):
-        """Create user with hashed password and auto profile based on role"""
-        password = validated_data.pop('password', None)
-        role = validated_data.pop('role', None)
+        role = validated_data.pop('role')
+        password = validated_data.pop('password')
 
-        user = User(**validated_data)
-        if password:
-            user.set_password(password)
+        user = CustomUser(**validated_data)
+        user.set_password(password)
 
-        if role:
-            user.role = role
+        if role == 'vet':
+            user.is_vet = True
+        else:
+            user.is_client = True
 
-        #Automatically create related profile
-        if role == 'veterinarian':
+        user.save()
+
+        # create related profile
+        if user.is_vet:
             Vetprofile.objects.create(user=user)
-
-        elif role == 'client':
-            OwnerProfile.objects.create(user=user)
+        else:
+            ClientProfile.objects.create(user=user)
 
         return user
+
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        email = data.get('email')
+        password = data.get('password')
+
+        user = authenticate(email=email, password=password)
+        if not user:
+            raise serializers.ValidationError("Invalid email or password.")
+        data['user'] = user
+        return data
+
 
 
 #class RegisterSerializer(serializers.ModelSerializer):
@@ -76,11 +98,11 @@ class CustomUserSerializer(serializers.ModelSerializer):
         #return data
 
 
-class OwnerProfileSerializer(serializers.ModelSerializer):
+class ClientProfileSerializer(serializers.ModelSerializer):
     user = CustomUserSerializer(read_only=True)
 
     class Meta:
-        model = OwnerProfile
+        model = ClientProfile
         fields = ['id', 'user', 'phone', 'address']
 
 class VetProfileSerializer(serializers.ModelSerializer):

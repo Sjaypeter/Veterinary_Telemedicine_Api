@@ -5,16 +5,19 @@ from django.contrib.auth.models import User
 # Create your models here.
 
 class CustomUser(AbstractUser):
-    ROLES = (
-        ('veterinarian', 'Veterinarian'),
-        ('client', 'Client'),
-    )
-    role = models.CharField(max_length=12, choices=ROLES)
+    email = models.EmailField(unique=True)
+    bio = models.TextField(blank=True, null=True)
+    profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
+    is_vet = models.BooleanField(default=False)
+    is_client = models.BooleanField(default=False)
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username']
 
     def __str__(self):
-        return f"{self.username} ({self.role})"
+        return self.email
 
-class OwnerProfile(models.Model):
+class ClientProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     phone = models.CharField(max_length=15)
     address = models.TextField()

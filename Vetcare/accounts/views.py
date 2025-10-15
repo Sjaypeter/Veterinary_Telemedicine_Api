@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from . serializers import CustomUserSerializer, OwnerProfileSerializer, VetProfileSerializer,RegisterSerializer,LoginSerializer
+from . serializers import CustomUserSerializer, RegisterSerializer, LoginSerializer, VetProfileSerializer
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -8,7 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authtoken.views import ObtainAuthToken
 from django.contrib.auth import get_user_model, authenticate
-from . models import CustomUser, Vetprofile,OwnerProfile
+from . models import CustomUser, Vetprofile,ClientProfile
 from django.shortcuts import get_object_or_404
 
 
@@ -19,11 +19,38 @@ User = get_user_model()
 
 
 class RegisterView(generics.CreateAPIView):
-    """Allows a new user to register (vet or owner)."""
+    """Registers a new Vet or Client."""
+    serializer_class = RegisterSerializer
+    permission_classes = [AllowAny]
 
-    queryset = CustomUser.objects.all()
-    serializer_class = CustomUserSerializer
-    permission_classes = [permissions.AllowAny]
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response({
+            "message": "Registration successful",
+            "user": CustomUserSerializer(user).data
+        }, status=status.HTTP_201_CREATED)
+
+
+class LoginView(APIView):
+    """Handles user login for both Vet and Client."""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        """Show login form in browsable API."""
+        serializer = LoginSerializer()
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data["user"]
+
+        return Response({
+            "message": "Login successful",
+            "user": CustomUserSerializer(user).data
+        }, status=status.HTTP_200_OK)
 
 
     #def perform_create(self, serializer):
@@ -37,35 +64,6 @@ class RegisterView(generics.CreateAPIView):
     
 
 
-
-class LoginView(APIView):
-    """Handles user authentication and login (for both vets and clients)."""
-    permission_classes = [AllowAny]
-
-    def get(self, request):
-        """Display the login form in the browsable API."""
-        serializer = LoginSerializer()
-        return Response(serializer.data)
-
-    def post(self, request):
-        """Authenticate and log in a user."""
-        serializer = LoginSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        email = serializer.validated_data.get("email")
-        password = serializer.validated_data.get("password")
-
-        user = authenticate(request, email=email, password=password)
-        if not user:
-            return Response(
-                {"detail": "Invalid credentials."},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-
-        return Response({
-            "message": "Login successful",
-            "user": CustomUserSerializer(user).data
-        }, status=status.HTTP_200_OK)
 
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
