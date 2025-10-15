@@ -3,6 +3,8 @@ from . serializers import CustomUserSerializer, OwnerProfileSerializer, VetProfi
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authtoken.views import ObtainAuthToken
 from django.contrib.auth import get_user_model, authenticate
@@ -34,14 +36,31 @@ class RegisterView(generics.CreateAPIView):
     
 
 
+
 class LoginView(APIView):
-    """Handles user authentication and login."""
+    """Handles user authentication and login (for both vets and clients)."""
     permission_classes = [AllowAny]
 
+    def get(self, request):
+        """Display the login form in the browsable API."""
+        serializer = LoginSerializer()
+        return Response(serializer.data)
+
     def post(self, request):
+        """Authenticate and log in a user."""
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data
+
+        email = serializer.validated_data.get("email")
+        password = serializer.validated_data.get("password")
+
+        user = authenticate(request, email=email, password=password)
+        if not user:
+            return Response(
+                {"detail": "Invalid credentials."},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
         return Response({
             "message": "Login successful",
             "user": CustomUserSerializer(user).data

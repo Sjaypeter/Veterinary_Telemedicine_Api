@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
 from .models import OwnerProfile, Vetprofile
+from .models import CustomUser
 
 User = get_user_model()
 
@@ -44,12 +45,12 @@ class LoginSerializer(serializers.Serializer):
         email = data.get("email")
         password = data.get("password")
 
-        if email and password:
-            user = authenticate(email=email, password=password)
-            if not user:
-                raise serializers.ValidationError("Invalid email or password.")
-        else:
+        if not email or not password:
             raise serializers.ValidationError("Both email and password are required.")
+
+        user = authenticate(email=email, password=password)
+        if not user:
+            raise serializers.ValidationError("Invalid login credentials.")
 
         data["user"] = user
         return data
