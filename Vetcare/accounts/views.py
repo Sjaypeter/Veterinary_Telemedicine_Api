@@ -22,17 +22,18 @@ class RegisterView(generics.CreateAPIView):
     """Allows a new user to register (vet or owner)."""
 
     queryset = CustomUser.objects.all()
-    serializer_class = RegisterSerializer
+    serializer_class = CustomUserSerializer
+    permission_classes = [permissions.AllowAny]
 
 
-    def perform_create(self, serializer):
-        user = serializer.save()
+    #def perform_create(self, serializer):
+     #   user = serializer.save()
         # Automatically create a profile based on user type
-        if user.is_owner:
-            OwnerProfile.objects.create(user=user)
-        elif user.is_vet:
-            Vetprofile.objects.create(user=user)
-        return user
+      #  if user.is_owner:
+       #     OwnerProfile.objects.create(user=user)
+        #elif user.is_vet:
+         #   Vetprofile.objects.create(user=user)
+        #return user
     
 
 

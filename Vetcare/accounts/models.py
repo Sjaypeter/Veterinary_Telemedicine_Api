@@ -5,14 +5,14 @@ from django.contrib.auth.models import User
 # Create your models here.
 
 class CustomUser(AbstractUser):
-    is_vet = models.BooleanField(default=False)
-    is_owner = models.BooleanField(default=False)
-    bio = models.TextField(blank=True, null=True)
-    profile_picture = models.ImageField(upload_to='profiles/', blank=True, null=True)
-    following = models.ManyToManyField('self', symmetrical=False, related_name='followers', blank=True)
+    ROLES = (
+        ('veterinarian', 'Veterinarian'),
+        ('client', 'Client'),
+    )
+    role = models.CharField(max_length=12, choices=ROLES)
 
     def __str__(self):
-        return self.username
+        return f"{self.username} ({self.role})"
 
 class OwnerProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
