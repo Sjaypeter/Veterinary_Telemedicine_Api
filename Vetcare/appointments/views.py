@@ -88,7 +88,7 @@ class OwnerPastAppointmentsView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        if not user.is_owner:
+        if not user.is_client:
             self.permission_denied(self.request, message="Only pet owners can access this view.")
         return Appointment.objects.filter(owner=user, appointment_date__lt=timezone.now()).order_by('-appointment_date')
     

@@ -3,7 +3,7 @@ from .views import (AppointmentListCreateView,AppointmentDetailView,VetUpcomingA
 from .views import (ConsultationListCreateView,ConsultationDetailView,OwnerConsultationHistoryView,VetFollowUpListView)
 
 urlpatterns = [
-    path('appointment/', AppointmentListCreateView.as_view(), name='appointment-list-create'),
+    path('Appointment/', AppointmentListCreateView.as_view(), name='appointment-list-create'),
     path('<int:pk>/', AppointmentDetailView.as_view(), name='appointment-detail'),
     path('vet/upcoming/', VetUpcomingAppointmentsView.as_view(), name='vet-upcoming'),
     path('owner/past/', OwnerPastAppointmentsView.as_view(), name='owner-past'),

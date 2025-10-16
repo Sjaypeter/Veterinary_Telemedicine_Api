@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'notifications',
     'billing',
     'pets',
+    'widget_tweaks',
 
     'rest_framework.authtoken',
     'corsheaders',
@@ -152,6 +153,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 AUTH_USER_MODEL = 'accounts.CustomUser'
+AUTHENTICATION_BACKENDS = ['django.contrib.auth.backends.ModelBackend']
 
 
 REST_FRAMEWORK = {

@@ -8,9 +8,37 @@ User = get_user_model()
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
     class Meta:
         model = CustomUser
-        fields = ['id', 'username', 'email', 'bio', 'profile_picture', 'is_vet', 'is_client']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'password']
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
+
+    def create(self, validated_data):
+        #Creates user with hashed password and auto profile based on role
+        role = validated_data.pop('role', None)
+        password = validated_data.pop('password', None)
+
+        user = CustomUser(**validated_data)
+
+        if password:
+            user.set_password(password)
+
+        if role:
+            user.role = role
+        user.save()
+
+        
+
+        # create related profile
+        if role == 'Veterinarian':
+            Vetprofile.objects.create(user=user)
+        elif role == 'client':
+            ClientProfile.objects.create(user=user)
+
+        return user
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -52,12 +80,20 @@ class LoginSerializer(serializers.Serializer):
         email = data.get('email')
         password = data.get('password')
 
-        user = authenticate(email=email, password=password)
-        if not user:
-            raise serializers.ValidationError("Invalid email or password.")
+        if email and password:
+            try:
+                user = CustomUser.objects.get(email=email)
+            except CustomUser.DoesNotExist:
+                raise serializers.ValidationError("Invalid email or password")
+
+            user = authenticate(username=user.username, password=password)
+            if not user:
+                raise serializers.ValidationError("Invalid email or password")
+        else:
+            raise serializers.ValidationError("Email and password are required")
+
         data['user'] = user
         return data
-
 
 
 #class RegisterSerializer(serializers.ModelSerializer):

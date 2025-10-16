@@ -1,15 +1,26 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.validators import RegexValidator
 # Create your models here.
 
-class CustomUser(AbstractUser):
+
+class Role(models.TextChoices):
+    VET = 'VET', 'vet'
+    CLIENT = 'CLIENT', 'client'
+
+
+
+
+class CustomUser(AbstractBaseUser):
     email = models.EmailField(unique=True)
     bio = models.TextField(blank=True, null=True)
     profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
     is_vet = models.BooleanField(default=False)
     is_client = models.BooleanField(default=False)
+    role = models.CharField(max_length=20, choices=[('vet', 'Vet'), ('client', 'Client')], default='client',)
+
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']

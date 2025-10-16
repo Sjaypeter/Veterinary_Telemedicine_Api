@@ -22,5 +22,6 @@ urlpatterns = [
     path('vetcare/accounts/', include('accounts.urls')),
     path('vetcare/appointments/', include('appointments.urls')),
     path('vetcare/medical-records/', include('medical_records.urls')),
-    path('vetcare/pets/', include('pets.urls')),
+    path('vetcare/Pets/', include('pets.urls')),
+    path('vetcare-auth/', include('rest_framework.urls')),
 ]
