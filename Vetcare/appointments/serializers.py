@@ -1,33 +1,47 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import Appointment, Consultation
+from accounts . models import Vetprofile
 from pets.models import PetProfile
 
 
 User = get_user_model()
 
 class AppointmentSerializer(serializers.ModelSerializer):
-    owner = serializers.ReadOnlyField(source='owner.username')
-    vet_name = serializers.ReadOnlyField(source='vet.username')
-    pet_id = serializers.PrimaryKeyRelatedField(queryset=PetProfile.objects.all(), source='pet', write_only=True)
+    veterinarian = serializers.StringRelatedField(read_only=True)
+    client = serializers.StringRelatedField(read_only=True)
+
+
 
     class Meta:
         model = Appointment
         fields = [
-            'id', 'owner', 'vet', 'vet_name', 'pet', 'pet_id',
+            'id', 'client', 'veterinarian', 'pet', 'pet_id',
             'appointment_date', 'reason', 'status',
         ]
-        read_only_fields = ['id', 'owner', 'status']
+        read_only_fields = ['veterinarian', 'client', 'status', 'reason']
 
-    def create(self, validated_data):
-        validated_data['owner'] = self.context['request'].user
-        return super().create(validated_data)
-    
-#Shows owner username and vet username (read-only).
 
-#Allows setting the pet via pet_id for clean API requests.
+    def __init__(self, *args, **kwargs):
+        #Customizes fields dynamically based on user role
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')    
 
-#Automatically assigns the logged-in user as the owner when creating an appointment.
+        if request:
+            if request.user.role == 'client':
+                self.fields['status'].read_only = True
+
+            elif request.user.role == 'veterinarian':
+                self.fields['reason'].read_only = True
+
+
+#For creating appointments
+class Appointmentcreateserializer(serializers.ModelSerializer):
+    veterinarian = serializers.PrimaryKeyRelatedField(queryset=Vetprofile.objects.all())
+
+    class Meta:
+        model = Appointment
+        fields = ['veterinarian', 'reason']
 
 
 

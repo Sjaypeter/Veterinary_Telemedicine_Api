@@ -3,61 +3,46 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .models import MedicalRecord, Vaccination
-from medical_records. serializers import MedicalRecordSerializer, VaccinationSerializer
+from appointments.models import Appointment
+from medical_records.serializers import MedicalRecordSerializer, VaccinationSerializer
 from django.utils import timezone
 from pets.models import PetProfile
 from rest_framework.exceptions import PermissionDenied
+from accounts.permissions import IsClient, IsVeterinarian
 
 
-class MedicalRecordListCreateView(generics.ListCreateAPIView):
+class MedicalRecordListView(generics.ListAPIView):
     
-    #GET: List all medical records for the authenticated user’s pets. POST: Vets can create new medical records for a pet.
+    #GET: List all medical records for the authenticated user’s pets.
     
+
     serializer_class = MedicalRecordSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
-        # Owners see their own pets' records; vets see records they created
-        if getattr(user, "is_vet", False):
-            return MedicalRecord.objects.filter(vet=user).order_by("-visit_date")
-        return MedicalRecord.objects.filter(pet__owner=user).order_by("-visit_date")
+        if user.role == 'veterinarian':
+            return MedicalRecord.objects.filter(appointment__veterinarian=user)
+        elif user.role == 'patient':
+            return MedicalRecord.objects.filter(appointment__client=user)
+        return MedicalRecord.objects.none()
+
+
+
+class MedicalRecordCreateView(generics.CreateAPIView):
+    #Only vetss can create medical records
+    serializer_class = MedicalRecord
+    permission_classes = [IsVeterinarian]
 
     def perform_create(self, serializer):
-        user = self.request.user
+        #Ensure vets can only make records for their own appointments
+        appointment_id = self.request.data.get('appointment')
+        appointment = get_object_or_404(Appointment, id=appointment_id)
 
-        if not getattr(user, "is_vet", False):
-            raise PermissionDenied("Only veterinarians can create medical records.")
-        
-        pet_id = self.request.data.get("pet")
-        pet = get_object_or_404(PetProfile, id=pet_id)
+        if appointment.veterinarian != self.request.user:
+            raise PermissionDenied("You can only create records for your own appointments.")
 
-        serializer.save(vet=user, pet=pet)
-
-
-
-class MedicalRecordDetailView(generics.RetrieveUpdateDestroyAPIView):
-    
-    #View or edit a single medical record.- Only the vet who created it can edit/delete. - The owner of the pet can view it.
-
-
-    serializer_class = MedicalRecordSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    queryset = MedicalRecord.objects.all()
-
-    def get_object(self):
-        record = get_object_or_404(MedicalRecord, pk=self.kwargs["pk"])
-        user = self.request.user
-
-        if record.vet != user and record.pet.owner != user:
-            self.permission_denied(self.request, message="You are not authorized to access this record.")
-        return record
-
-    def update(self, request, *args, **kwargs):
-        record = self.get_object()
-        if record.vet != request.user:
-            return Response({"error": "Only the vet who created this record can update it."}, status=status.HTTP_403_FORBIDDEN)
-        return super().update(request, *args, **kwargs)
+        serializer.save(appointment=appointment)
 
 
 class VaccinationListCreateView(generics.ListCreateAPIView):

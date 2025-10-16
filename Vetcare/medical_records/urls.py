@@ -1,14 +1,14 @@
 from django.urls import path
 from .views import (
-    MedicalRecordListCreateView,
-    MedicalRecordDetailView,
+    MedicalRecordListView,
+    MedicalRecordCreateView,
     VaccinationListCreateView,
-    VaccinationDetailView
+    VaccinationDetailView,
 )
 
 urlpatterns = [
-    path("records/", MedicalRecordListCreateView.as_view(), name="medical-record-list-create"),
-    path("records/<int:pk>/", MedicalRecordDetailView.as_view(), name="medical-record-detail"),
+    path("records/", MedicalRecordListView.as_view(), name="medical-record-list"),
+    path("records/create/", MedicalRecordCreateView.as_view(), name="medical-record-create"),
     path("vaccinations/", VaccinationListCreateView.as_view(), name="vaccination-list-create"),
     path("vaccinations/<int:pk>/", VaccinationDetailView.as_view(), name="vaccination-detail"),
 ]

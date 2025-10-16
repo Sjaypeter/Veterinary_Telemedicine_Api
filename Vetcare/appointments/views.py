@@ -4,94 +4,72 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from .models import Appointment, Consultation
-from .serializers import AppointmentSerializer, ConsultationSerializer
+from .serializers import AppointmentSerializer, ConsultationSerializer, Appointmentcreateserializer
 from django.contrib.auth import get_user_model
-
-
+from accounts . permissions import IsVeterinarian, IsClient
+from rest_framework import serializers
+from accounts . models import Vetprofile, ClientProfile
 # Create your views here.
 
 User = get_user_model()
 
-
-class AppointmentListCreateView(generics.ListCreateAPIView):
-    """
-    - GET: List appointments for the logged-in user.
-    - POST: Create a new appointment.
-    """
-    serializer_class = AppointmentSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['reason', 'pet__name']
-    ordering_fields = ['appointment_date', 'created_at']
-
-    def get_queryset(self):
-        user = self.request.user
-        # Vet sees appointments assigned to them, Owner sees their own
-        if user.is_vet:
-            return Appointment.objects.filter(vet=user).order_by('-appointment_date')
-        return Appointment.objects.filter(owner=user).order_by('-appointment_date')
+class Appointmentrequestview(generics.CreateAPIView):
+    serializer_class = Appointmentcreateserializer
+    permission_classes = [IsClient, permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
+        #Allows only client to request appointments
+        veterinarian_id = self.request.data.get('veterinarian')
+        if not veterinarian_id:
+            raise serializers.ValidationError({"veterinarian": "Veterinarian ID required"})
         
-       # Automatically assign the logged-in owner as the creator. Vet can be selected from the request.
-        serializer.save(owner=self.request.user)
+        try:
+            vet_profile = Vetprofile.objects.get(id=veterinarian_id)
+        except Vetprofile.DoesNotExist:
+            raise serializers.ValidationError({"veterinarian": "Invalid ID"})
+        
+        serializer.save(
+            client = self.request.user,
+            veterinarian = vet_profile.user,
+            status = 'pending'
+        )
 
-
-
-class AppointmentDetailView(generics.RetrieveUpdateDestroyAPIView):
-
-    #Retrieve, update, or cancel an appointment. Only the owner or assigned vet can modify.
-
-
+class AppointmentListView(generics.ListAPIView):
     serializer_class = AppointmentSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        """Return only appointments relevant to the logged-in user."""
+        user = self.request.user
+        if user.role == 'veterinarian':
+            return Appointment.objects.filter(veterinarian=user).order_by('-date')
+        elif user.role == 'client':
+            return Appointment.objects.filter(client=user).order_by('-date')
+        return Appointment.objects.none()
+
+
+class AppointmentUpdateView(generics.UpdateAPIView):
     queryset = Appointment.objects.all()
+    serializer_class = AppointmentSerializer
+    permission_classes = [permissions.IsAuthenticated, IsVeterinarian]
 
-    def get_object(self):
-        appointment = get_object_or_404(Appointment, pk=self.kwargs['pk'])
-        user = self.request.user
 
-        # Only allow the owner or vet to access this record
-        if appointment.owner != user and appointment.vet != user:
-            self.permission_denied(self.request, message="Not authorized to access this appointment.")
-        return appointment
-
-    def delete(self, request, *args, **kwargs):
-
-        #mark the appointment as cancelled
-
+    def update(self, request, *args, **kwargs):
+        #Allow Vet to confirm, cancel, or complete appointment."""
         appointment = self.get_object()
-        appointment.status = 'Cancelled'
+        status_choice = request.data.get('status')
+
+        if status_choice not in ['confirmed', 'cancelled', 'completed']:
+            return Response({"error": "Invalid status update."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Allow doctor to set date/time when confirming
+        if status_choice == 'confirmed':
+            appointment.date = request.data.get('date', appointment.date)
+            appointment.time = request.data.get('time', appointment.time)
+
+        appointment.status = status_choice
         appointment.save()
-        return Response({"message": "Appointment cancelled successfully."}, status=status.HTTP_200_OK)
-    
-
-class VetUpcomingAppointmentsView(generics.ListAPIView):
-    
-    #List all upcoming appointments for the logged-in vet.
-
-    serializer_class = AppointmentSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        user = self.request.user
-        if not user.is_vet:
-            self.permission_denied(self.request, message="Only veterinarians can access this view.")
-        return Appointment.objects.filter(vet=user, appointment_date__gte=timezone.now(), status='Scheduled').order_by('appointment_date')
-
-class OwnerPastAppointmentsView(generics.ListAPIView):
-    
-    #List all past (completed or cancelled) appointments for a pet owner.
-    
-    serializer_class = AppointmentSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        user = self.request.user
-        if not user.is_client:
-            self.permission_denied(self.request, message="Only pet owners can access this view.")
-        return Appointment.objects.filter(owner=user, appointment_date__lt=timezone.now()).order_by('-appointment_date')
-    
+        return Response(AppointmentSerializer(appointment).data)   
 
 class ConsultationListCreateView(generics.ListCreateAPIView):
     #- GET: List consultations for the logged-in user.
@@ -158,22 +136,6 @@ class OwnerConsultationHistoryView(generics.ListAPIView):
         return Consultation.objects.filter(owner=user)
 
 
-class VetFollowUpListView(generics.ListAPIView):
-    
-    #List upcoming follow-up consultations for the logged-in vet.
-
-    serializer_class = ConsultationSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        user = self.request.user
-        if not getattr(user, "is_vet", False):
-            self.permission_denied(self.request, message="Only veterinarians can access this view.")
-        return Consultation.objects.filter(
-            vet=user,
-            is_follow_up_required=True,
-            follow_up_date__gte=timezone.now()
-        ) #set up follow up order filter
     
 
     

@@ -72,30 +72,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 
-class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    password = serializers.CharField(write_only=True)
-
-    def validate(self, data):
-        email = data.get('email')
-        password = data.get('password')
-
-        if email and password:
-            try:
-                user = CustomUser.objects.get(email=email)
-            except CustomUser.DoesNotExist:
-                raise serializers.ValidationError("Invalid email or password")
-
-            user = authenticate(username=user.username, password=password)
-            if not user:
-                raise serializers.ValidationError("Invalid email or password")
-        else:
-            raise serializers.ValidationError("Email and password are required")
-
-        data['user'] = user
-        return data
-
-
 #class RegisterSerializer(serializers.ModelSerializer):
  #   #Allows setting user type (vet/owner) at registration.
   #  password = serializers.CharField(write_only=True)

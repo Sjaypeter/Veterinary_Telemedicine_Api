@@ -1,32 +1,56 @@
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
 # Create your models here.
 
 
-class Role(models.TextChoices):
-    VET = 'VET', 'vet'
-    CLIENT = 'CLIENT', 'client'
+
+class CustomUserManager(BaseUserManager):
+    """Custom user manager for email-based authentication"""
+
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError("The Email field must be set")
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("is_active", True)
+
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
+
+        return self.create_user(email, password, **extra_fields)
 
 
 
-
-class CustomUser(AbstractBaseUser):
+class CustomUser(AbstractUser):
+    ROLES = (
+        ('VETERINARIAN', 'veterinarian'),
+        ('CLIENT', 'client'),
+    )
+    username = None  # remove username field
     email = models.EmailField(unique=True)
-    bio = models.TextField(blank=True, null=True)
-    profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
-    is_vet = models.BooleanField(default=False)
-    is_client = models.BooleanField(default=False)
-    role = models.CharField(max_length=20, choices=[('vet', 'Vet'), ('client', 'Client')], default='client',)
 
+    role = models.CharField(max_length=12, choices=ROLES, default='CLIENT')
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username']
+    REQUIRED_FIELDS = []
+
+    objects = CustomUserManager()
 
     def __str__(self):
-        return self.email
+        return f"{self.email} - {self.role}"
+    
 
 class ClientProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -34,7 +58,7 @@ class ClientProfile(models.Model):
     address = models.TextField()
     
     def __str__(self):
-        return f"Owner: {self.user.username}"
+        return f"Owner: {self.user.email}"
 
 
 class Vetprofile(models.Model):
@@ -43,4 +67,4 @@ class Vetprofile(models.Model):
     license_number = models.CharField(max_length=50)
     
     def __str__(self):
-        return f"Vet: {self.user.username} - {self.specialization}"
+        return f"Vet: {self.user.email} - {self.specialization}"
