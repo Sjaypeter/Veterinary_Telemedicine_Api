@@ -1,8 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import MedicalRecord, Vaccination
+from .models import MedicalRecord
 from appointments . models import Appointment
-from pets. serializers import PetSerializer
 
 
 User = get_user_model()
@@ -33,22 +32,3 @@ class MedicalRecordSerializer(serializers.ModelSerializer):
                 self.fields['appointment'].queryset = Appointment.objects.filter(veterinaraian=request.user)
 
 
-
-class VaccinationSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Vaccination
-        fields = [
-            'id','pet', 'vet',
-            'vaccine_name', 'date_administered', 'next_due_date', 'notes'
-        ]
-        read_only_fields = ['id', 'vet']
-
-    def create(self, validated_data):
-        """
-        Automatically assign the logged-in vet as the one who administered the vaccine.
-        """
-        request = self.context.get('request')
-        if request and hasattr(request, 'user'):
-            validated_data['vet'] = request.user
-        return super().create(validated_data)

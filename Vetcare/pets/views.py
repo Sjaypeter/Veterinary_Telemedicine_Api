@@ -3,42 +3,24 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 from .models import PetProfile
-from .serializers import PetSerializer
+from .serializers import Petprofilecreateserializer, Petprofileserializer
 from accounts.models import CustomUser
+from accounts . permissions import IsClient
 
 
-class PetListCreateView(generics.ListCreateAPIView):
-    """
-    GET: List all pets belonging to the authenticated user.
-    POST: Create a new pet and assign it to the authenticated user.
-    """
-    serializer_class = PetSerializer
+class Petprofileview(generics.ListAPIView):
+    queryset = PetProfile.objects.all()
+    serializer_class = Petprofileserializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class PetprofiledetailView(generics.RetrieveUpdateAPIView):
+    serializer_class = Petprofileserializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        # Return only the pets owned by the logged-in user
-        return PetProfile.objects.filter(owner=self.request.user)
-
-    def perform_create(self, serializer):
-        # Automatically assign the current user as the owner
-        serializer.save(owner=self.request.user)
-
-
-class PetDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    GET: Retrieve pet details by ID.
-    PUT/PATCH: Update pet information (only if owner).
-    DELETE: Delete pet (only if owner).
-    """
-    serializer_class = PetSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        # Allow access only to the user's own pets
-        return PetProfile.objects.filter(owner=self.request.user)
-
-    def delete(self, request, *args, **kwargs):
-        pet = self.get_object()
-        if pet.owner != request.user:
-            return Response({'detail': 'You do not have permission to delete this petprofile.'}, status=status.HTTP_403_FORBIDDEN)
-        return super().delete(request, *args, **kwargs)
+        #Only clients allowed to alter this
+        user = self.request.user
+        if user.role == 'client':
+            return PetProfile.objects.filter(user=user)
+        return PetProfile.objects.none()

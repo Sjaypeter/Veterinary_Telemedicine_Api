@@ -65,7 +65,7 @@ class VetprofiledetailView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        #Only clients allowed to alter this
+        #Only vets allowed to alter this
         user = self.request.user
         if user.role == 'veterinarian':
             return Vetprofile.objects.filter(user=user)

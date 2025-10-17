@@ -23,5 +23,6 @@ urlpatterns = [
     path('vetcare/appointments/', include('appointments.urls')),
     path('vetcare/medical-records/', include('medical_records.urls')),
     path('vetcare/Pets/', include('pets.urls')),
+    path('vetcare/notifications/', include('notifications.urls')),
     path('vetcare-auth/', include('rest_framework.urls')),
 ]

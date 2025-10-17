@@ -5,21 +5,36 @@ from .models import PetProfile
 User = get_user_model()
 
 
-class PetSerializer(serializers.ModelSerializer):
-    owner = serializers.ReadOnlyField(source='owner.username')
+class Petprofileserializer(serializers.ModelSerializer):
+    veterinarian = serializers.StringRelatedField(read_only=True)
+    client = serializers.StringRelatedField(read_only=True)
+
+
 
     class Meta:
         model = PetProfile
-        fields = [
-            'id', 'owner', 'name', 'species',
-            'breed', 'age', 'gender', 'weight',
-            'profile_image', 'created_at'
-        ]
-        read_only_fields = ['id', 'owner', 'created_at']
+        fields =  "__all__"
 
-    def create(self, validated_data):
-        validated_data['owner'] = self.context['request'].user
-        return super().create(validated_data)
-    
+        read_only_fields = ['name', 'breed', 'age', 'gender']
 
-    #Automatically assigns the logged-in user as the owner when a petprofile is created.
+
+    def __init__(self, *args, **kwargs):
+        #Customizes fields dynamically based on user role
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')    
+
+        if request:
+            if request.user.role == 'client':
+                self.fields['status'].read_only = True
+
+            elif request.user.role == 'veterinarian':
+                self.fields['reason'].read_only = True
+
+
+#For creating petprofile
+class Petprofilecreateserializer(serializers.ModelSerializer):
+    owner = serializers.PrimaryKeyRelatedField(queryset=PetProfile.objects.all())
+
+    class Meta:
+        model = PetProfile
+        fields = "__all__"

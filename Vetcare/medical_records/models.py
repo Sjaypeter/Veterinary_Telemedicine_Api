@@ -18,15 +18,3 @@ class MedicalRecord(models.Model):
 
     def __str__(self):
         return f"Record for {self.pet.name} ({self.date})"
-
-
-class Vaccination(models.Model):
-    vet = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
-    pet = models.ForeignKey(PetProfile, on_delete=models.CASCADE, related_name='vaccinations')
-    vaccine_name = models.CharField(max_length=100)
-    date_administered = models.DateField()
-    next_due_date = models.DateField(blank=True, null=True)
-    notes = models.TextField(blank=True)
-
-    def __str__(self):
-        return f"{self.vaccine_name} - {self.pet.name}"

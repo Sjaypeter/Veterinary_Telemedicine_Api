@@ -1,7 +1,7 @@
 from django.urls import path
-from .views import PetListCreateView, PetDetailView
+from .views import PetprofiledetailView, Petprofileview
 
 urlpatterns = [
-    path('Petprofile/', PetListCreateView.as_view(), name='pet-list-create'),
-    path('<int:pk>/', PetDetailView.as_view(), name='pet-detail'),
+    path('petprofile/', Petprofileview.as_view(), name='pet-list'),
+    path('petprofile/<int:pk>/', PetprofiledetailView.as_view(), name='pet-detail'),
 ]
