@@ -31,8 +31,8 @@ class MedicalRecordListView(generics.ListAPIView):
 
 class MedicalRecordCreateView(generics.CreateAPIView):
     #Only vetss can create medical records
-    serializer_class = MedicalRecord
-    permission_classes = [IsVeterinarian]
+    serializer_class = MedicalRecordSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
         #Ensure vets can only make records for their own appointments

@@ -4,7 +4,7 @@ from .views import (ConsultationListCreateView,ConsultationDetailView,OwnerConsu
 
 urlpatterns = [
     path('appointment/requests/', Appointmentrequestview.as_view(), name='appointment-request'),
-    path('appointment/', AppointmentListView.as_view(), name='appointment-list'),
+    path('Appointment/', AppointmentListView.as_view(), name='appointment-list'),
     path('appointment/<int:pk>/update/', AppointmentUpdateView.as_view(), name = 'appointment-update'),
     
 

@@ -1,10 +1,9 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import MedicalRecord
-from appointments . models import Appointment
+from appointments.models import Appointment
 
 
-User = get_user_model()
 
 class MedicalRecordSerializer(serializers.ModelSerializer):
     appointment = serializers.PrimaryKeyRelatedField(
@@ -16,19 +15,36 @@ class MedicalRecordSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MedicalRecord
-        fields = [
-            'pet_id', 'pet', 'vet',
-            'diagnosis', 'treatment', 'prescription',
-            'visit_date', 'follow_up_date', 'notes'
-        ]
+        fields = "__all__"
         read_only_fields = ['id', 'veterinarian','pet', 'visit_date']
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        appointment = validated_data.pop('appointment')
+        # Automatically assign the pet from the appointment
+        validated_data['pet'] = appointment.pet
+        return MedicalRecord.objects.create(**validated_data)
+    
+
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        if request and hasattr(request, 'user') and request.user.is_authenticated:
-            # If the logged-in user is a vet, show only their appointments
-            if request.user.role == 'veterinarian':
-                self.fields['appointment'].queryset = Appointment.objects.filter(veterinaraian=request.user)
+        request = self.context.get('request', None)
+
+        if request and hasattr(request, 'user'):
+            user = request.user
+
+            # If veterinarian: show only their appointments
+            if hasattr(user, 'vetprofile'):
+                self.fields['appointment'].queryset = Appointment.objects.filter(veterinarian=user)
+
+            # If client: show only their appointments
+            elif hasattr(user, 'clientprofile'):
+                self.fields['appointment'].queryset = Appointment.objects.filter(client=user)
+
+            # Otherwise allow all (optional)
+            else:
+                self.fields['appointment'].queryset = Appointment.objects.all()
+
 
 

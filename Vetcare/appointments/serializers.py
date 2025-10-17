@@ -5,7 +5,6 @@ from accounts . models import Vetprofile
 from pets.models import PetProfile
 
 
-User = get_user_model()
 
 class AppointmentSerializer(serializers.ModelSerializer):
     veterinarian = serializers.StringRelatedField(read_only=True)
@@ -15,11 +14,8 @@ class AppointmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Appointment
-        fields = [
-            'id', 'client', 'veterinarian', 'pet', 'pet_id',
-            'appointment_date', 'reason', 'status',
-        ]
-        read_only_fields = ['veterinarian', 'client', 'status', 'reason']
+        fields = "__all__"
+    
 
 
     def __init__(self, *args, **kwargs):
@@ -41,7 +37,13 @@ class Appointmentcreateserializer(serializers.ModelSerializer):
 
     class Meta:
         model = Appointment
-        fields = ['veterinarian', 'reason']
+        fields = ['veterinarian','pet', 'client','reason']
+    
+    def create(self, validated_data):
+        vet_profile = validated_data.pop('veterinarian')
+        if isinstance(vet_profile, Vetprofile):
+            validated_data['veterinarian'] = vet_profile.user
+        return super().create(validated_data)
 
 
 

@@ -1,20 +1,48 @@
 from django.urls import path
-from . views import RegisterView,ClientprofileView,ClientprofiledetailView,VetprofiledetailView,Vetprofileview
-from . import views
-from django.contrib.auth import views as auth_views
+from rest_framework_simplejwt.views import TokenRefreshView
+
+from .views import (
+    # Authentication
+    UserRegistrationView,
+    UserLoginView,
+    UserLogoutView,
+    CurrentUserView,
+    # Client Profiles
+    ClientProfileListView,
+    ClientProfileDetailView,
+    MyClientProfileView,
+    # Vet Profiles
+    VetProfileListView,
+    VetProfileDetailView,
+    MyVetProfileView,
+    VetProfileUpdateView,
+    # User Management
+    UserListView,
+    UserDetailView,
+)
+
+app_name = 'accounts'
 
 urlpatterns = [
-    path('register/', RegisterView.as_view(), name='register'),
-
-
-    path('veterinarian/', views.Vetprofileview.as_view(), name='vet-list'),
-    path('veterinarian/<int:pk>/', views.VetprofiledetailView.as_view(), name='vet-detail'),
-
-
-    path('client/', views.ClientprofileView.as_view(), name='client-list'),
-    path('client/<int:pk>/', views.ClientprofiledetailView.as_view(), name='client-detail'),
-
-    path('login/', auth_views.LoginView.as_view(template_name='accounts/login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout')
-
+    # AUTHENTICATION 
+    path('auth/register/', UserRegistrationView.as_view(), name='register'),
+    path('auth/login/', UserLoginView.as_view(), name='login'),
+    path('auth/logout/', UserLogoutView.as_view(), name='logout'),
+    path('auth/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
+    path('auth/me/', CurrentUserView.as_view(), name='current-user'),
+    
+    # CLIENT PROFILES 
+    path('clients/', ClientProfileListView.as_view(), name='client-list'),
+    path('clients/<int:pk>/', ClientProfileDetailView.as_view(), name='client-detail'),
+    path('profile/client/me/', MyClientProfileView.as_view(), name='my-client-profile'),
+    
+    #VET PROFILES
+    path('veterinarians/', VetProfileListView.as_view(), name='vet-list'),
+    path('veterinarians/<int:pk>/', VetProfileDetailView.as_view(), name='vet-detail'),
+    path('veterinarians/<int:pk>/update/', VetProfileUpdateView.as_view(), name='vet-update'),
+    path('profile/vet/me/', MyVetProfileView.as_view(), name='my-vet-profile'),
+    
+    #USER MANAGEMENT 
+    path('users/', UserListView.as_view(), name='user-list'),
+    path('users/<int:pk>/', UserDetailView.as_view(), name='user-detail'),
 ]

@@ -45,7 +45,6 @@ INSTALLED_APPS = [
     'appointments',
     'medical_records',
     'notifications',
-    'billing',
     'pets',
     'widget_tweaks',
 
@@ -162,7 +161,7 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",  # For mobile/frontend
     ],
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticatedOrReadOnly",
+        "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",

@@ -1,125 +1,203 @@
 from rest_framework import serializers
-from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
-from .models import ClientProfile, Vetprofile
-from .models import CustomUser
-
-User = get_user_model()
+from .models import ClientProfile, Vetprofile, CustomUser
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
+    """Serializer for CustomUser model - for reading user data"""
+    
+    full_name = serializers.SerializerMethodField()
+    
     class Meta:
         model = CustomUser
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'password']
+        fields = [
+            'id', 'email', 'first_name', 'last_name', 
+            'full_name', 'role', 'phone', 'is_active',
+            'created_at'
+        ]
+        read_only_fields = ['id', 'created_at']
+    
+    def get_full_name(self, obj):
+        return obj.get_full_name()
+
+
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    """Serializer for user registration"""
+    
+    password = serializers.CharField(
+        write_only=True, 
+        min_length=8,
+        style={'input_type': 'password'},
+        help_text="Password must be at least 8 characters"
+    )
+    password_confirm = serializers.CharField(
+        write_only=True,
+        style={'input_type': 'password'},
+        help_text="Confirm your password"
+    )
+    
+    class Meta:
+        model = CustomUser
+        fields = [
+            'email', 'password', 'password_confirm',
+            'first_name', 'last_name', 'role', 'phone'
+        ]
         extra_kwargs = {
-            'password': {'write_only': True}
+            'first_name': {'required': True},
+            'last_name': {'required': True},
+            'email': {'required': True},
         }
-
+    
+    def validate_email(self, value):
+        """Check if email is already registered"""
+        if CustomUser.objects.filter(email=value.lower()).exists():
+            raise serializers.ValidationError("This email is already registered.")
+        return value.lower()
+    
+    def validate(self, data):
+        """Validate that passwords match"""
+        if data.get('password') != data.get('password_confirm'):
+            raise serializers.ValidationError({
+                "password_confirm": "Passwords do not match."
+            })
+        return data
+    
     def create(self, validated_data):
-        #Creates user with hashed password and auto profile based on role
-        role = validated_data.pop('role', None)
-        password = validated_data.pop('password', None)
-
-        user = CustomUser(**validated_data)
-
-        if password:
-            user.set_password(password)
-
-        if role:
-            user.role = role
-        user.save()
-
+        """Create user with hashed password"""
+        # Remove password_confirm as it's not needed for user creation
+        validated_data.pop('password_confirm')
         
-
-        # create related profile
-        if role == 'Veterinarian':
-            Vetprofile.objects.create(user=user)
-        elif role == 'client':
-            ClientProfile.objects.create(user=user)
-
-        return user
-
-
-class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
-    role = serializers.ChoiceField(choices=[('vet', 'Vet'), ('client', 'Client')])
-
-    class Meta:
-        model = CustomUser
-        fields = ['username', 'email', 'password', 'role']
-
-    def create(self, validated_data):
-        role = validated_data.pop('role')
         password = validated_data.pop('password')
-
-        user = CustomUser(**validated_data)
-        user.set_password(password)
-
-        if role == 'vet':
-            user.is_vet = True
-        else:
-            user.is_client = True
-
-        user.save()
-
-        # create related profile
-        if user.is_vet:
-            Vetprofile.objects.create(user=user)
-        else:
-            ClientProfile.objects.create(user=user)
-
+        role = validated_data.get('role', CustomUser.CLIENT)
+        
+        # Create user
+        user = CustomUser.objects.create_user(
+            password=password,
+            **validated_data
+        )
+        
         return user
 
 
-#class RegisterSerializer(serializers.ModelSerializer):
- #   #Allows setting user type (vet/owner) at registration.
-  #  password = serializers.CharField(write_only=True)
-
-   # class Meta:
-    #    model = User
-     #   fields = ['username', 'email', 'password', 'is_vet', 'is_owner']
-
-#    def create(self, validated_data):
- #          username=validated_data['username'],
-  #          email=validated_data.get('email'),
-   #         password=validated_data['password'],
-    #        is_vet=validated_data.get('is_vet', False),
-     #       is_owner=validated_data.get('is_owner', False),
-      #  )
-       # return user
-
-
-
-#class LoginSerializer(serializers.Serializer):
- #   email = serializers.EmailField()
-  #  password = serializers.CharField(write_only=True)
-
-   # def validate(self, data):
-    #    email = data.get("email")
-     #   password = data.get("password")
-
-      #  if not email or not password:
-       #     raise serializers.ValidationError("Both email and password are required.")
-
-        #user = authenticate(email=email, password=password)
-        #if not user:
-         #   raise serializers.ValidationError("Invalid login credentials.")
-
-        #data["user"] = user
-        #return data
+class LoginSerializer(serializers.Serializer):
+    """Serializer for user login"""
+    
+    email = serializers.EmailField()
+    password = serializers.CharField(
+        write_only=True,
+        style={'input_type': 'password'}
+    )
+    
+    def validate(self, data):
+        """Authenticate user"""
+        email = data.get('email', '').lower()
+        password = data.get('password', '')
+        
+        if email and password:
+            # Try to get the user
+            try:
+                user = CustomUser.objects.get(email=email)
+            except CustomUser.DoesNotExist:
+                raise serializers.ValidationError(
+                    "Unable to log in with provided credentials."
+                )
+            
+            # Check password
+            if not user.check_password(password):
+                raise serializers.ValidationError(
+                    "Unable to log in with provided credentials."
+                )
+            
+            # Check if user is active
+            if not user.is_active:
+                raise serializers.ValidationError(
+                    "User account is disabled."
+                )
+            
+            data['user'] = user
+        else:
+            raise serializers.ValidationError(
+                "Must include 'email' and 'password'."
+            )
+        
+        return data
 
 
 class ClientProfileSerializer(serializers.ModelSerializer):
+    """Serializer for Client Profile"""
+    
     user = CustomUserSerializer(read_only=True)
-
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+    user_name = serializers.CharField(source='user.get_full_name', read_only=True)
+    
     class Meta:
         model = ClientProfile
-        fields = ['id', 'user', 'phone', 'address']
+        fields = [
+            'id', 'user', 'user_email', 'user_name',
+            'address', 'emergency_contact',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'user', 'created_at', 'updated_at']
+
 
 class VetProfileSerializer(serializers.ModelSerializer):
+    """Serializer for Veterinarian Profile"""
+    
     user = CustomUserSerializer(read_only=True)
-
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+    user_name = serializers.CharField(source='user.get_full_name', read_only=True)
+    
     class Meta:
         model = Vetprofile
-        fields = ['id', 'user', 'specialization', 'license_number']
+        fields = [
+            'id', 'user', 'user_email', 'user_name',
+            'specialization', 'license_number', 
+            'years_of_experience', 'bio', 'is_available',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'user', 'created_at', 'updated_at']
+    
+    def validate_license_number(self, value):
+        """Ensure license number is unique"""
+        instance = self.instance
+        if instance:
+            # Updating existing profile
+            if Vetprofile.objects.exclude(pk=instance.pk).filter(license_number=value).exists():
+                raise serializers.ValidationError("This license number is already in use.")
+        else:
+            # Creating new profile
+            if Vetprofile.objects.filter(license_number=value).exists():
+                raise serializers.ValidationError("This license number is already in use.")
+        return value
+
+
+class VetProfileListSerializer(serializers.ModelSerializer):
+    """Simplified serializer for listing veterinarians"""
+    
+    user_name = serializers.CharField(source='user.get_full_name', read_only=True)
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+    user_phone = serializers.CharField(source='user.phone', read_only=True)
+    
+    class Meta:
+        model = Vetprofile
+        fields = [
+            'id', 'user_name', 'user_email', 'user_phone',
+            'specialization', 'years_of_experience', 'is_available'
+        ]
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    """Complete user profile serializer (includes related profile)"""
+    
+    client_profile = ClientProfileSerializer(read_only=True)
+    vet_profile = VetProfileSerializer(read_only=True)
+    
+    class Meta:
+        model = CustomUser
+        fields = [
+            'id', 'email', 'first_name', 'last_name', 
+            'role', 'phone', 'is_active',
+            'client_profile', 'vet_profile',
+            'created_at'
+        ]
+        read_only_fields = ['id', 'email', 'role', 'created_at']

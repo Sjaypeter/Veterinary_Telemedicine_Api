@@ -2,12 +2,15 @@ from django.db import models
 from pets. models import PetProfile
 from django.conf import settings
 from django.utils import timezone
+from django.contrib.auth.models import User
+from accounts.models import CustomUser
+from appointments.models import Appointment
 
-User = settings.AUTH_USER_MODEL
 
 class MedicalRecord(models.Model):
     pet = models.ForeignKey(PetProfile, on_delete=models.CASCADE, related_name='medical_records')
-    vet = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='vet_records')
+    appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE, null=True, blank=True)
+    vet = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='vet_records')
     diagnosis = models.TextField()
     treatment = models.TextField()
     date = models.DateField(auto_now_add=True)

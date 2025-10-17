@@ -9,30 +9,47 @@ from django.contrib.auth import get_user_model
 from accounts . permissions import IsVeterinarian, IsClient
 from rest_framework import serializers
 from accounts . models import Vetprofile, ClientProfile
+from django.core.exceptions import ObjectDoesNotExist
+from rest_framework.exceptions import ValidationError
 # Create your views here.
 
-User = get_user_model()
 
 class Appointmentrequestview(generics.CreateAPIView):
     serializer_class = Appointmentcreateserializer
-    permission_classes = [IsClient, permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        #Allows only client to request appointments
-        veterinarian_id = self.request.data.get('veterinarian')
-        if not veterinarian_id:
-            raise serializers.ValidationError({"veterinarian": "Veterinarian ID required"})
+        # The client is the logged-in user
+        client = self.request.user
+        
+        # Get the veterinarian ID from the request data
+        vet_id = self.request.data.get('veterinarian')
+        
+        if not vet_id:
+            raise ValidationError({"veterinarian": "This field is required."})
         
         try:
-            vet_profile = Vetprofile.objects.get(id=veterinarian_id)
+            # Get the veterinarian's profile using the ID from request
+            vetprofile = Vetprofile.objects.get(id=vet_id)
         except Vetprofile.DoesNotExist:
-            raise serializers.ValidationError({"veterinarian": "Invalid ID"})
+            raise ValidationError({"veterinarian": "Veterinarian profile not found."})
         
+        # Get the pet ID from request data
+        pet_id = self.request.data.get('pet')
+        
+        if not pet_id:
+            raise ValidationError({"pet": "This field is required."})
+        
+        # Save with the veterinarian PROFILE, not the user
+        # Check your model to see if it expects veterinarian (User) or veterinarian (Vetprofile)
         serializer.save(
-            client = self.request.user,
-            veterinarian = vet_profile.user,
-            status = 'pending'
+            client=client,
+            veterinarian=vetprofile,  # Changed: pass the profile itself
+            pet_id=pet_id
         )
+
+
+
 
 class AppointmentListView(generics.ListAPIView):
     serializer_class = AppointmentSerializer
@@ -41,35 +58,44 @@ class AppointmentListView(generics.ListAPIView):
     def get_queryset(self):
         """Return only appointments relevant to the logged-in user."""
         user = self.request.user
+
         if user.role == 'veterinarian':
-            return Appointment.objects.filter(veterinarian=user).order_by('-date')
+                return Appointment.objects.filter(veterinarian=user).order_by('-date')
         elif user.role == 'client':
-            return Appointment.objects.filter(client=user).order_by('-date')
+                return Appointment.objects.filter(client=user).order_by('-date')
+        
+        # If no role, return empty
         return Appointment.objects.none()
 
 
 class AppointmentUpdateView(generics.UpdateAPIView):
     queryset = Appointment.objects.all()
     serializer_class = AppointmentSerializer
-    permission_classes = [permissions.IsAuthenticated, IsVeterinarian]
-
+    permission_classes = [permissions.IsAuthenticated]
 
     def update(self, request, *args, **kwargs):
-        #Allow Vet to confirm, cancel, or complete appointment."""
+        """Allow Vet to confirm, cancel, or complete appointment."""
         appointment = self.get_object()
+        
         status_choice = request.data.get('status')
 
         if status_choice not in ['confirmed', 'cancelled', 'completed']:
-            return Response({"error": "Invalid status update."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Invalid status. Must be 'confirmed', 'cancelled', or 'completed'."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         # Allow doctor to set date/time when confirming
         if status_choice == 'confirmed':
             appointment.date = request.data.get('date', appointment.date)
-            appointment.time = request.data.get('time', appointment.time)
 
         appointment.status = status_choice
         appointment.save()
-        return Response(AppointmentSerializer(appointment).data)   
+        
+        return Response(
+            AppointmentSerializer(appointment).data,
+            status=status.HTTP_200_OK
+        )  
 
 class ConsultationListCreateView(generics.ListCreateAPIView):
     #- GET: List consultations for the logged-in user.
