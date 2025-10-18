@@ -119,7 +119,7 @@ class ClientProfileListView(generics.ListAPIView):
     """
     queryset = ClientProfile.objects.select_related('user').all()
     serializer_class = ClientProfileSerializer
-    permission_classes = [IsAuthenticated, IsVeterinarian]
+    permission_classes = [IsAuthenticated]
 
 
 class ClientProfileDetailView(generics.RetrieveUpdateAPIView):

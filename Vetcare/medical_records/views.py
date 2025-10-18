@@ -1,46 +1,151 @@
-
-from rest_framework import generics, permissions, status
-from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
-from .models import MedicalRecord
-from appointments.models import Appointment
-from medical_records.serializers import MedicalRecordSerializer
-from django.utils import timezone
-from pets.models import PetProfile
+from rest_framework import generics, permissions
 from rest_framework.exceptions import PermissionDenied
-from accounts.permissions import IsClient, IsVeterinarian
+from django.shortcuts import get_object_or_404
 
+from .models import MedicalRecord
+from .serializers import (MedicalRecordListSerializer,MedicalRecordDetailSerializer,MedicalRecordCreateSerializer,MedicalRecordUpdateSerializer)
+from .permissions import (IsMedicalRecordParticipant,CanCreateMedicalRecord,CanAccessPetMedicalHistory)
+from accounts.permissions import IsVeterinarian
+
+
+#MEDICAL RECORD VIEWS 
 
 class MedicalRecordListView(generics.ListAPIView):
-    
-    #GET: List all medical records for the authenticated user’s pets.
-    
-
-    serializer_class = MedicalRecordSerializer
+    """
+    - Veterinarians see records they created
+    - Clients see records for their pets
+    """
+    serializer_class = MedicalRecordListSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        """Return medical records based on user role"""
         user = self.request.user
-        if user.role == 'veterinarian':
-            return MedicalRecord.objects.filter(appointment__veterinarian=user)
-        elif user.role == 'patient':
-            return MedicalRecord.objects.filter(appointment__client=user)
+        
+        if user.role == 'VETERINARIAN':
+            return MedicalRecord.objects.filter(
+                veterinarian=user
+            ).select_related('pet', 'veterinarian', 'appointment').order_by('-visit_date')
+        
+        elif user.role == 'CLIENT':
+            return MedicalRecord.objects.filter(
+                pet__owner=user
+            ).select_related('pet', 'veterinarian', 'appointment').order_by('-visit_date')
+        
         return MedicalRecord.objects.none()
 
 
+class MedicalRecordDetailView(generics.RetrieveUpdateAPIView):
+    """
+    View or update a specific medical record.
+    """
+    queryset = MedicalRecord.objects.select_related('pet', 'veterinarian', 'appointment').all()
+    permission_classes = [permissions.IsAuthenticated, IsMedicalRecordParticipant]
+
+    def get_serializer_class(self):
+        """Use different serializers for read vs write"""
+        if self.request.method in ['PUT', 'PATCH']:
+            return MedicalRecordUpdateSerializer
+        return MedicalRecordDetailSerializer
+
 
 class MedicalRecordCreateView(generics.CreateAPIView):
-    #Only vetss can create medical records
-    serializer_class = MedicalRecordSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    """
+    Create a medical record (Veterinarians only).
+    """
+    serializer_class = MedicalRecordCreateSerializer
+    permission_classes = [permissions.IsAuthenticated, CanCreateMedicalRecord]
 
     def perform_create(self, serializer):
-        #Ensure vets can only make records for their own appointments
-        appointment_id = self.request.data.get('appointment')
-        appointment = get_object_or_404(Appointment, id=appointment_id)
+        """Save record with the logged-in veterinarian"""
+        serializer.save(veterinarian=self.request.user)
 
-        if appointment.veterinarian != self.request.user:
-            raise PermissionDenied("You can only create records for your own appointments.")
 
-        serializer.save(appointment=appointment)
+class PetMedicalHistoryView(generics.ListAPIView):
+    """
+    View complete medical history for a specific pet.
+    """
+    serializer_class = MedicalRecordListSerializer
+    permission_classes = [permissions.IsAuthenticated, CanAccessPetMedicalHistory]
 
+    def get_queryset(self):
+        """Return all medical records for the specified pet"""
+        pet_id = self.kwargs.get('pet_id')
+        return MedicalRecord.objects.filter(
+            pet_id=pet_id
+        ).select_related('veterinarian', 'appointment').order_by('-visit_date')
+
+
+class MyPetsMedicalRecordsView(generics.ListAPIView):
+    """
+    View all medical records for all pets owned by the client.
+    """
+    serializer_class = MedicalRecordListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        """Return records for all pets owned by the client"""
+        user = self.request.user
+        
+        if user.role != 'CLIENT':
+            return MedicalRecord.objects.none()
+        
+        return MedicalRecord.objects.filter(
+            pet__owner=user
+        ).select_related('pet', 'veterinarian', 'appointment').order_by('-visit_date')
+
+
+class RecentMedicalRecordsView(generics.ListAPIView):
+    """
+    View recent medical records (last 30 days).
+    """
+    serializer_class = MedicalRecordListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        """Return recent medical records based on user role"""
+        from datetime import timedelta
+        from django.utils import timezone
+        
+        user = self.request.user
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        
+        base_query = MedicalRecord.objects.filter(
+            visit_date__gte=thirty_days_ago
+        ).select_related('pet', 'veterinarian', 'appointment')
+        
+        if user.role == 'VETERINARIAN':
+            return base_query.filter(veterinarian=user).order_by('-visit_date')
+        
+        elif user.role == 'CLIENT':
+            return base_query.filter(pet__owner=user).order_by('-visit_date')
+        
+        return MedicalRecord.objects.none()
+
+
+class FollowUpRequiredView(generics.ListAPIView):
+    """
+    List medical records that require follow-up.
+    """
+    serializer_class = MedicalRecordListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        """Return records with pending follow-ups"""
+        from django.utils import timezone
+        
+        user = self.request.user
+        today = timezone.now().date()
+        
+        base_query = MedicalRecord.objects.filter(
+            follow_up_required=True,
+            follow_up_date__gte=today
+        ).select_related('pet', 'veterinarian', 'appointment')
+        
+        if user.role == 'VETERINARIAN':
+            return base_query.filter(veterinarian=user).order_by('follow_up_date')
+        
+        elif user.role == 'CLIENT':
+            return base_query.filter(pet__owner=user).order_by('follow_up_date')
+        
+        return MedicalRecord.objects.none()
